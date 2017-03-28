@@ -1,0 +1,36 @@
+{
+  "intents": [
+    {
+      "intent": "GetPhone",
+      "slots": [
+        {
+          "name": "Parent",
+          "type": "LIST_PARENTS"
+        }
+      ]
+    },
+    {
+      "intent": "SetPhone",
+      "slots": [
+        {
+          "name": "Parent",
+          "type": "LIST_PARENTS"
+        },
+        {
+          "name": "Phone",
+          "type": "AMAZON.NUMBER"
+        }
+      ]
+    },
+
+    {
+      "intent": "AMAZON.HelpIntent"
+    },
+    {
+      "intent": "AMAZON.StopIntent"
+    },
+    {
+      "intent": "AMAZON.CancelIntent"
+    }
+  ]
+}

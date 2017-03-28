@@ -1,0 +1,8 @@
+GetPhone what is {Parent} phone number?
+GetPhone what is {Parent} phone?
+GetPhone what is {Parent} number?
+GetPhone what is {Parent} cell?
+GetPhone how do I call {Parent}?
+SetPhone set {Parent} phone number to {Phone}
+SetPhone change {Parent} phone number to {Phone}
+SetPhone {Parent} phone number is {Phone}
