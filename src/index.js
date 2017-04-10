@@ -3,6 +3,8 @@
 var Alexa = require('alexa-sdk');
 
 exports.handler = function(event, context, callback) {
+    console.log(JSON.stringify(event, null, 2));
+
     var alexa = Alexa.handler(event, context);
     // alexa.appId = 'amzn1.ask.skill.f496e2f2-49f0-4c66-9b71-1589762eb269';
     alexa.resources = languageStrings;
@@ -11,23 +13,20 @@ exports.handler = function(event, context, callback) {
     alexa.execute();
 };
 
+// TODO: Handle Invalid Custom Slot Type Values
+function getParentName(event) {
+  var parentSlot = event.request.intent.slots.Parent;
+  var parentName = '';
+  if (parentSlot && parentSlot.value) {
+      parentName = parentSlot.value.toLowerCase();
+  }
+  return parentName;
+}
+
 var handlers = {
-     'NewSession': function() {
-        // any previous session attributes are now loaded from Dynamo into the session attributes
-        var todayNow = new Date();
-
-        if(this.attributes['timestamp']) {  // user must have been here before
-            var launchCount = this.attributes['launchCount'];
-            this.attributes['launchCount'] = parseInt(launchCount) + 1;
-
-        } else {  // first use
-            this.attributes['launchCount'] = 0;
-        }
-
-        this.attributes['timestamp'] = todayNow;
-        this.emit('LaunchRequest');
-    },
     'LaunchRequest': function () {
+        console.log("Launch w/attributes - " + JSON.stringify(this.attributes, null, 2));
+
         this.attributes['speechOutput'] = this.t("WELCOME_MESSAGE", this.t("SKILL_NAME"));
         // If the user either does not reply to the welcome message or says something that is not
         // understood, they will be prompted again with this text.
@@ -35,11 +34,14 @@ var handlers = {
         this.emit(':ask', this.attributes['speechOutput'], this.attributes['repromptSpeech'])
     },
     'GetPhone': function () {
-        var parentSlot = this.event.request.intent.slots.Parent;
-        var parentName;
-        if (parentSlot && parentSlot.value) {
-            parentName = parentSlot.value.toLowerCase();
+        // if parent empty then render help
+        if (!(this.event.request.intent.slots.Parent &&
+            this.event.request.intent.slots.Parent.value)) {
+          this.emit(':tell', this.t("HELP_MESSAGE"));
+          return;
         }
+
+        var parentName = getParentName(this.event);
 
         if (this.attributes['phone']) {
           var phoneAttr = this.attributes['phone'];
@@ -57,24 +59,32 @@ var handlers = {
         }
     },
     'SetPhone': function () {
-        var parentSlot = this.event.request.intent.slots.Parent;
-        var parentName;
-        if (parentSlot && parentSlot.value) {
-            parentName = parentSlot.value.toLowerCase();
+        // if parent and phone are empty then render help
+        if (!this.event.request.intent.slots.Parent &&
+            !this.event.request.intent.slots.Phone) {
+          this.emit(':tell', this.t("HELP_MESSAGE"));
+          return;
         }
 
-        var phoneValue = this.event.request.intent.slots.Phone.value;
-        this.attributes['phone'] = phoneValue;
+        var parentName = getParentName(this.event);
+        var phoneValue = this.event.request.intent.slots.Phone &&
+                          this.event.request.intent.slots.Phone.value;
 
-        var phoneString = "<say-as interpret-as='telephone'>"+phoneValue+"</say-as>";
+        if (!phoneValue) {
+          this.emit(':tell', this.t("NO_PHONE_MESSAGE"));
+        }
+        else {
+          var phoneString = "<say-as interpret-as='telephone'>"+phoneValue+"</say-as>";
+          var speechOutput = this.t("SET_PHONE_MESSAGE", parentName, phoneString);
 
-        var speechOutput = this.t("SET_PHONE_MESSAGE", parentName, phoneString);
-        var repromptSpeech = this.t("SET_PHONE_MESSAGE", parentName, phoneString);
+          this.attributes['speechOutput'] = speechOutput;
+          this.attributes['phone'] = phoneValue;
+          this.attributes['phone'][parentName] = phoneValue;
 
-        this.attributes['speechOutput'] = speechOutput;
-        this.attributes['repromptSpeech'] = repromptSpeech;
-
-        this.emit(':ask', speechOutput, repromptSpeech);
+          this.emit(':tell', speechOutput);
+          console.log("Persisting attributes - " + JSON.stringify(this.attributes, null, 2));
+          this.emit(':saveState', true); // force save
+        }
     },
     'AMAZON.HelpIntent': function () {
         this.attributes['speechOutput'] = this.t("HELP_MESSAGE");
@@ -91,7 +101,10 @@ var handlers = {
         this.emit('SessionEndedRequest');
     },
     'SessionEndedRequest':function () {
+        console.log('SessionEndedRequest');
         this.emit(':tell', this.t("STOP_MESSAGE"));
+        console.log("Persisting attributes - " + JSON.stringify(this.attributes, null, 2));
+        this.emit(':saveState', true);
     },
     'Unhandled': function () {
         this.attributes['speechOutput'] = this.t("HELP_MESSAGE");
