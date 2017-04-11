@@ -6,7 +6,9 @@ exports.handler = function(event, context, callback) {
     console.log(JSON.stringify(event, null, 2));
 
     var alexa = Alexa.handler(event, context);
-    // alexa.appId = 'amzn1.ask.skill.f496e2f2-49f0-4c66-9b71-1589762eb269';
+    if ('undefined' === typeof process.env.DEBUG) {
+      // alexa.appId = 'amzn1.ask.skill.f496e2f2-49f0-4c66-9b71-1589762eb269';
+    }
     alexa.resources = languageStrings;
     alexa.dynamoDBTableName = 'babysitterUsers';
     alexa.registerHandlers(handlers);
@@ -79,7 +81,7 @@ var handlers = {
 
           this.attributes['speechOutput'] = speechOutput;
           this.attributes['phone'] = phoneValue;
-          this.attributes['phone'][parentName] = phoneValue;
+          this.attributes['phone-'+parentName] = phoneValue;
 
           this.emit(':tell', speechOutput);
           console.log("Persisting attributes - " + JSON.stringify(this.attributes, null, 2));
